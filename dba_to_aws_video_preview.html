@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0A0E1A; font-family: 'Courier New', monospace; color: #fff; }
+  .player { width: 100%; max-width: 800px; margin: 0 auto; }
+  .screen { width: 100%; aspect-ratio: 16/9; background: #0A0E1A; position: relative; overflow: hidden; border-radius: 8px; border: 1px solid #1a2540; }
+  .scene { position: absolute; inset: 0; display: none; padding: 24px 36px; flex-direction: column; }
+  .scene.active { display: flex; }
+
+  /* Grid bg */
+  .grid-bg { position: absolute; inset: 0; background-image: linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px); background-size: 40px 40px; }
+
+  /* Intro */
+  .intro-badges { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; z-index:1; }
+  .badge-oracle { background: #F80000; color: #fff; padding: 5px 14px; border-radius: 5px; font-size: 13px; font-weight: bold; letter-spacing: 2px; }
+  .badge-aws { background: #FF9900; color: #000; padding: 5px 14px; border-radius: 5px; font-size: 13px; font-weight: bold; letter-spacing: 2px; }
+  .arrow { color: #00D4FF; font-size: 20px; }
+  .intro-super { font-size: 11px; letter-spacing: 6px; color: #00D4FF; margin-bottom: 8px; z-index:1; }
+  .intro-title { font-size: 42px; font-weight: 900; line-height: 1.05; z-index:1; }
+  .intro-title span { background: linear-gradient(90deg, #FF9900, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .intro-line { height: 3px; background: linear-gradient(90deg, #F80000, #FF9900, #00D4FF); border-radius: 2px; margin-top: 16px; max-width: 400px; z-index:1; }
+  .channel-tag { margin-top: 12px; color: #8892A4; font-size: 12px; letter-spacing: 4px; z-index:1; }
+
+  /* Skill scene */
+  .skill-top-bar { height: 3px; position: absolute; top: 0; left: 0; right: 0; border-radius: 0; }
+  .skill-number-bg { position: absolute; right: 30px; top: 10px; font-size: 110px; font-weight: 900; opacity: 0.05; line-height: 1; }
+  .skill-header { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; z-index:1; }
+  .skill-icon-box { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .skill-num-label { font-size: 9px; letter-spacing: 4px; margin-bottom: 2px; }
+  .skill-title { font-size: 28px; font-weight: 900; line-height: 1.1; }
+  .skill-subtitle { font-size: 13px; color: #8892A4; }
+  .compare-row { display: flex; gap: 10px; margin-bottom: 10px; z-index:1; }
+  .compare-card { flex: 1; padding: 10px 14px; border-radius: 8px; border-left: 3px solid; }
+  .compare-label { font-size: 9px; letter-spacing: 3px; margin-bottom: 4px; text-transform: uppercase; }
+  .compare-text { font-size: 12px; color: #C8D4E8; }
+  .code-row { display: flex; gap: 8px; flex: 1; z-index:1; }
+  .code-arrow { display: flex; align-items: center; color: #00D4FF; font-size: 18px; }
+  .code-block { flex: 1; background: #050810; border-radius: 8px; padding: 10px 12px; border: 1px solid; }
+  .code-lang { font-size: 9px; letter-spacing: 3px; margin-bottom: 6px; text-transform: uppercase; }
+  .code-pre { font-size: 9.5px; color: #C8D4E8; line-height: 1.6; white-space: pre; }
+  .insight { padding: 8px 14px; border-radius: 8px; z-index:1; margin-top: 8px; font-size: 11px; line-height: 1.5; color: #C8D4E8; }
+  .watermark { position: absolute; bottom: 12px; right: 36px; color: #4A5568; font-size: 9px; letter-spacing: 3px; }
+
+  /* Outro */
+  .outro-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 20px; z-index:1; }
+  .pill { padding: 4px 12px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; border: 1px solid; }
+  .outro-main { font-size: 34px; font-weight: 900; line-height: 1.1; text-align: center; z-index:1; }
+  .outro-main span { background: linear-gradient(90deg, #F80000, #FF9900, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .cta-btn { background: linear-gradient(135deg, #FF9900, #FF6B35); color: #000; padding: 12px 32px; border-radius: 30px; font-size: 15px; font-weight: 900; margin-top: 20px; z-index:1; }
+
+  /* Controls */
+  .controls { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; justify-content: center; }
+  .ctrl-btn { background: #0F1629; border: 1px solid #1a2540; color: #8892A4; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-family: 'Courier New', monospace; cursor: pointer; transition: all 0.2s; letter-spacing: 1px; }
+  .ctrl-btn:hover, .ctrl-btn.active { background: #141E35; color: #00D4FF; border-color: #00D4FF44; }
+  .timeline { display: flex; gap: 4px; margin: 8px 0; }
+  .tl-seg { height: 3px; flex: 1; border-radius: 2px; background: #1a2540; cursor: pointer; transition: background 0.2s; }
+  .tl-seg.done { background: #00D4FF66; }
+  .tl-seg.current { background: #00D4FF; }
+</style>
+</head>
+<body>
+<div class="player">
+  <div class="screen" id="screen">
+
+    <!-- INTRO -->
+    <div class="scene active" id="scene-0" style="background: radial-gradient(ellipse at 30% 50%, #0D1B3E 0%, #0A0E1A 60%); align-items:flex-start; justify-content:center;">
+      <div class="grid-bg"></div>
+      <div class="intro-badges"><span class="badge-oracle">ORACLE DBA</span><span class="arrow">→</span><span class="badge-aws">AWS CLOUD</span></div>
+      <div class="intro-super">TOP 5 SKILLS</div>
+      <div class="intro-title">Oracle DBAs<br><span>Need for AWS</span></div>
+      <div class="intro-line"></div>
+      <div class="channel-tag">DBA TO CLOUD GUIDE</div>
+    </div>
+
+    <!-- SKILL 1 -->
+    <div class="scene" id="scene-1">
+      <div class="grid-bg" style="opacity:0.5"></div>
+      <div class="skill-top-bar" style="background: linear-gradient(90deg, #00D4FF, #0077AA)"></div>
+      <div class="skill-number-bg" style="color:#00D4FF">01</div>
+      <div class="skill-header">
+        <div class="skill-icon-box" style="background:#00D4FF22; border:1.5px solid #00D4FF">🗄️</div>
+        <div>
+          <div class="skill-num-label" style="color:#00D4FF">SKILL 01</div>
+          <div class="skill-title">Cloud SQL Databases</div>
+          <div class="skill-subtitle">RDS & Aurora</div>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-card" style="background:#F8000011; border-color:#F80000">
+          <div class="compare-label" style="color:#F80000">⊘ Traditional Oracle</div>
+          <div class="compare-text">Oracle DB on bare-metal</div>
+        </div>
+        <div class="compare-card" style="background:#FF990011; border-color:#FF9900">
+          <div class="compare-label" style="color:#FF9900">✓ AWS Equivalent</div>
+          <div class="compare-text" style="color:#fff;font-weight:600">Amazon RDS / Aurora PostgreSQL</div>
+        </div>
+      </div>
+      <div class="code-row">
+        <div class="code-block" style="border-color:#F8000033">
+          <div class="code-lang" style="color:#F80000">Oracle SQL</div>
+          <pre class="code-pre">-- Oracle: Create tablespace
+CREATE TABLESPACE users_ts
+  DATAFILE '/u01/data/users01.dbf'
+  SIZE 100M AUTOEXTEND ON;</pre>
+        </div>
+        <div class="code-arrow">→</div>
+        <div class="code-block" style="border-color:#FF990033">
+          <div class="code-lang" style="color:#FF9900">AWS / Cloud</div>
+          <pre class="code-pre">-- Aurora: Just create the DB
+CREATE DATABASE myapp;
+-- AWS handles storage
+-- automatically ✓</pre>
+        </div>
+      </div>
+      <div class="insight" style="background:#00D4FF15; border:1px solid #00D4FF40; margin-top:8px">
+        <strong style="color:#00D4FF">💡 Pro tip: </strong>Managed backups, Multi-AZ failover, read replicas — no more patching nights!
+      </div>
+      <div class="watermark">DBA TO CLOUD GUIDE</div>
+    </div>
+
+    <!-- SKILL 2 -->
+    <div class="scene" id="scene-2">
+      <div class="grid-bg" style="opacity:0.5"></div>
+      <div class="skill-top-bar" style="background: linear-gradient(90deg, #FF9900, #FF6B35)"></div>
+      <div class="skill-number-bg" style="color:#FF9900">02</div>
+      <div class="skill-header">
+        <div class="skill-icon-box" style="background:#FF990022; border:1.5px solid #FF9900">🔐</div>
+        <div>
+          <div class="skill-num-label" style="color:#FF9900">SKILL 02</div>
+          <div class="skill-title">IAM & Security</div>
+          <div class="skill-subtitle">Identity & Access Management</div>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-card" style="background:#F8000011; border-color:#F80000">
+          <div class="compare-label" style="color:#F80000">⊘ Traditional Oracle</div>
+          <div class="compare-text">Oracle Roles & Profiles</div>
+        </div>
+        <div class="compare-card" style="background:#FF990011; border-color:#FF9900">
+          <div class="compare-label" style="color:#FF9900">✓ AWS Equivalent</div>
+          <div class="compare-text" style="color:#fff;font-weight:600">AWS IAM Policies & Roles</div>
+        </div>
+      </div>
+      <div class="code-row">
+        <div class="code-block" style="border-color:#F8000033">
+          <div class="code-lang" style="color:#F80000">Oracle SQL</div>
+          <pre class="code-pre">-- Oracle: Grant role
+GRANT dba TO scott;
+CREATE PROFILE secure_profile
+  LIMIT PASSWORD_LIFE_TIME 90;</pre>
+        </div>
+        <div class="code-arrow">→</div>
+        <div class="code-block" style="border-color:#FF990033">
+          <div class="code-lang" style="color:#FF9900">IAM Policy JSON</div>
+          <pre class="code-pre">{
+  "Effect": "Allow",
+  "Action": [
+    "rds-db:connect"
+  ],
+  "Resource": "arn:aws:rds-db:*"
+}</pre>
+        </div>
+      </div>
+      <div class="insight" style="background:#FF990015; border:1px solid #FF990040">
+        <strong style="color:#FF9900">💡 Pro tip: </strong>Least-privilege access, resource-based policies, database auth via IAM tokens.
+      </div>
+      <div class="watermark">DBA TO CLOUD GUIDE</div>
+    </div>
+
+    <!-- SKILL 3 -->
+    <div class="scene" id="scene-3">
+      <div class="grid-bg" style="opacity:0.5"></div>
+      <div class="skill-top-bar" style="background: linear-gradient(90deg, #00FF88, #00AA55)"></div>
+      <div class="skill-number-bg" style="color:#00FF88">03</div>
+      <div class="skill-header">
+        <div class="skill-icon-box" style="background:#00FF8822; border:1.5px solid #00FF88">📈</div>
+        <div>
+          <div class="skill-num-label" style="color:#00FF88">SKILL 03</div>
+          <div class="skill-title">Performance Tuning</div>
+          <div class="skill-subtitle">CloudWatch & Performance Insights</div>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-card" style="background:#F8000011; border-color:#F80000">
+          <div class="compare-label" style="color:#F80000">⊘ Traditional Oracle</div>
+          <div class="compare-text">Oracle AWR / ADDM Reports</div>
+        </div>
+        <div class="compare-card" style="background:#FF990011; border-color:#FF9900">
+          <div class="compare-label" style="color:#FF9900">✓ AWS Equivalent</div>
+          <div class="compare-text" style="color:#fff;font-weight:600">Performance Insights + CloudWatch</div>
+        </div>
+      </div>
+      <div class="code-row">
+        <div class="code-block" style="border-color:#F8000033">
+          <div class="code-lang" style="color:#F80000">Oracle AWR</div>
+          <pre class="code-pre">SELECT sql_id, elapsed_time,
+       executions
+FROM   dba_hist_sqlstat
+ORDER  BY elapsed_time DESC;</pre>
+        </div>
+        <div class="code-arrow">→</div>
+        <div class="code-block" style="border-color:#00FF8833">
+          <div class="code-lang" style="color:#00FF88">Performance Schema</div>
+          <pre class="code-pre">SELECT digest_text, avg_latency
+FROM   performance_schema
+         .events_statements_summary
+ORDER  BY avg_latency DESC;</pre>
+        </div>
+      </div>
+      <div class="insight" style="background:#00FF8815; border:1px solid #00FF8840">
+        <strong style="color:#00FF88">💡 Pro tip: </strong>Visual query analysis, wait event monitoring — AWR concepts translate directly!
+      </div>
+      <div class="watermark">DBA TO CLOUD GUIDE</div>
+    </div>
+
+    <!-- SKILL 4 -->
+    <div class="scene" id="scene-4">
+      <div class="grid-bg" style="opacity:0.5"></div>
+      <div class="skill-top-bar" style="background: linear-gradient(90deg, #FF6B6B, #CC3333)"></div>
+      <div class="skill-number-bg" style="color:#FF6B6B">04</div>
+      <div class="skill-header">
+        <div class="skill-icon-box" style="background:#FF6B6B22; border:1.5px solid #FF6B6B">🚀</div>
+        <div>
+          <div class="skill-num-label" style="color:#FF6B6B">SKILL 04</div>
+          <div class="skill-title">Database Migration</div>
+          <div class="skill-subtitle">AWS DMS & SCT</div>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-card" style="background:#F8000011; border-color:#F80000">
+          <div class="compare-label" style="color:#F80000">⊘ Traditional Oracle</div>
+          <div class="compare-text">Manual export/import (Data Pump)</div>
+        </div>
+        <div class="compare-card" style="background:#FF990011; border-color:#FF9900">
+          <div class="compare-label" style="color:#FF9900">✓ AWS Equivalent</div>
+          <div class="compare-text" style="color:#fff;font-weight:600">AWS Database Migration Service</div>
+        </div>
+      </div>
+      <div class="code-row">
+        <div class="code-block" style="border-color:#F8000033">
+          <div class="code-lang" style="color:#F80000">Oracle Data Pump</div>
+          <pre class="code-pre">expdp system/pwd \
+  DIRECTORY=dp_dir \
+  DUMPFILE=mydb.dmp \
+  FULL=YES</pre>
+        </div>
+        <div class="code-arrow">→</div>
+        <div class="code-block" style="border-color:#FF6B6B33">
+          <div class="code-lang" style="color:#FF6B6B">AWS DMS CLI</div>
+          <pre class="code-pre">aws dms create-replication-task \
+  --migration-type full-load \
+  --source-endpoint-arn $SRC \
+  --target-endpoint-arn $TGT</pre>
+        </div>
+      </div>
+      <div class="insight" style="background:#FF6B6B15; border:1px solid #FF6B6B40">
+        <strong style="color:#FF6B6B">💡 Pro tip: </strong>Schema Conversion Tool auto-converts Oracle PL/SQL to PostgreSQL — huge career skill!
+      </div>
+      <div class="watermark">DBA TO CLOUD GUIDE</div>
+    </div>
+
+    <!-- SKILL 5 -->
+    <div class="scene" id="scene-5">
+      <div class="grid-bg" style="opacity:0.5"></div>
+      <div class="skill-top-bar" style="background: linear-gradient(90deg, #C084FC, #9333EA)"></div>
+      <div class="skill-number-bg" style="color:#C084FC">05</div>
+      <div class="skill-header">
+        <div class="skill-icon-box" style="background:#C084FC22; border:1.5px solid #C084FC">⚙️</div>
+        <div>
+          <div class="skill-num-label" style="color:#C084FC">SKILL 05</div>
+          <div class="skill-title">Infrastructure as Code</div>
+          <div class="skill-subtitle">CloudFormation & Terraform</div>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-card" style="background:#F8000011; border-color:#F80000">
+          <div class="compare-label" style="color:#F80000">⊘ Traditional Oracle</div>
+          <div class="compare-text">Manual DBA runbook scripts</div>
+        </div>
+        <div class="compare-card" style="background:#FF990011; border-color:#FF9900">
+          <div class="compare-label" style="color:#FF9900">✓ AWS Equivalent</div>
+          <div class="compare-text" style="color:#fff;font-weight:600">Terraform / CloudFormation</div>
+        </div>
+      </div>
+      <div class="code-row">
+        <div class="code-block" style="border-color:#F8000033">
+          <div class="code-lang" style="color:#F80000">Old Way (Manual)</div>
+          <pre class="code-pre">-- 1. Create instance
+-- 2. Install Oracle
+-- 3. Configure listener
+-- 4. Create DB...
+-- (4 hours later)</pre>
+        </div>
+        <div class="code-arrow">→</div>
+        <div class="code-block" style="border-color:#C084FC33">
+          <div class="code-lang" style="color:#C084FC">Terraform HCL</div>
+          <pre class="code-pre">resource "aws_db_instance" "main" {
+  engine         = "aurora-postgresql"
+  instance_class = "db.r6g.large"
+  multi_az       = true
+} # Done in minutes ✓</pre>
+        </div>
+      </div>
+      <div class="insight" style="background:#C084FC15; border:1px solid #C084FC40">
+        <strong style="color:#C084FC">💡 Pro tip: </strong>DBAs who can write IaC are 10x more valuable. Your SQL skills make this easy!
+      </div>
+      <div class="watermark">DBA TO CLOUD GUIDE</div>
+    </div>
+
+    <!-- OUTRO -->
+    <div class="scene" id="scene-6" style="background: radial-gradient(ellipse at 50% 40%, #0D1B3E 0%, #0A0E1A 65%); align-items:center; justify-content:center;">
+      <div class="grid-bg"></div>
+      <div class="outro-pills">
+        <span class="pill" style="color:#00D4FF; border-color:#00D4FF44; background:#00D4FF11">01 Cloud SQL</span>
+        <span class="pill" style="color:#FF9900; border-color:#FF990044; background:#FF990011">02 IAM Security</span>
+        <span class="pill" style="color:#00FF88; border-color:#00FF8844; background:#00FF8811">03 Perf Tuning</span>
+        <span class="pill" style="color:#FF6B6B; border-color:#FF6B6B44; background:#FF6B6B11">04 Migration</span>
+        <span class="pill" style="color:#C084FC; border-color:#C084FC44; background:#C084FC11">05 IaC</span>
+      </div>
+      <div class="outro-main">Ready to make the<br><span>Cloud Switch? 🚀</span></div>
+      <div class="cta-btn">👍 LIKE & SUBSCRIBE</div>
+      <div style="margin-top:12px; color:#8892A4; font-size:10px; letter-spacing:4px; z-index:1">DBA TO CLOUD GUIDE</div>
+      <div style="position:absolute; bottom:16px; color:#4A5568; font-size:9px; letter-spacing:2px; font-family:'Courier New',monospace">NEXT → How to Migrate Oracle Database to AWS RDS in 2025</div>
+    </div>
+
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline" id="timeline"></div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn active" onclick="goTo(0)">INTRO</button>
+    <button class="ctrl-btn" onclick="goTo(1)">01 CLOUD SQL</button>
+    <button class="ctrl-btn" onclick="goTo(2)">02 IAM</button>
+    <button class="ctrl-btn" onclick="goTo(3)">03 PERF</button>
+    <button class="ctrl-btn" onclick="goTo(4)">04 DMS</button>
+    <button class="ctrl-btn" onclick="goTo(5)">05 IaC</button>
+    <button class="ctrl-btn" onclick="goTo(6)">OUTRO</button>
+  </div>
+</div>
+
+<script>
+  let current = 0;
+  const total = 7;
+
+  const tl = document.getElementById('timeline');
+  for (let i = 0; i < total; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'tl-seg' + (i === 0 ? ' current' : '');
+    seg.onclick = () => goTo(i);
+    tl.appendChild(seg);
+  }
+
+  function goTo(n) {
+    document.querySelectorAll('.scene').forEach((s, i) => {
+      s.classList.toggle('active', i === n);
+    });
+    document.querySelectorAll('.ctrl-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === n);
+    });
+    document.querySelectorAll('.tl-seg').forEach((s, i) => {
+      s.className = 'tl-seg' + (i < n ? ' done' : i === n ? ' current' : '');
+    });
+    current = n;
+  }
+
+  // Auto-advance every 3s
+  let auto = setInterval(() => {
+    goTo((current + 1) % total);
+  }, 3000);
+
+  document.getElementById('screen').addEventListener('click', () => {
+    clearInterval(auto);
+    goTo((current + 1) % total);
+  });
+</script>
+</body>
+</html>
